@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">manequiStore</string>
+    <string name="action_OpenGallery">Select Picture</string>
+    <string name="action_harris">Harris Corner Detector</string>
+    <string name="action_line_crop">Crop by lines</string>
+
+    <string name="toast_must_load_image">You must load an image first</string>
+</resources>

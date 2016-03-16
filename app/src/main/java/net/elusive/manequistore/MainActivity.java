@@ -14,6 +14,8 @@ import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -25,6 +27,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.features2d.FeatureDetector;
@@ -42,13 +45,38 @@ public class MainActivity extends AppCompatActivity {
     private Mat mOriginalImage;
     private Mat mSampledImage;
     private ImageView mImageView;
-
+    private SeekBar mGausianBlurSize;
+    private TextView mGausianValue;
+    private int mGausianSize = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mImageView = (ImageView) findViewById(R.id.image);
+        mGausianBlurSize = (SeekBar) findViewById(R.id.gausian_blur_size);
+        mGausianValue = (TextView) findViewById(R.id.gausian_value);
+
+        mGausianBlurSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                int valor = ((seekBar.getProgress()/10) * 2)+1 ;
+                mGausianSize = valor;
+                mGausianValue.setText("Tamaño = " + mGausianSize);
+                processImage();
+
+            }
+        });
     }
 
     @Override
@@ -88,9 +116,9 @@ public class MainActivity extends AppCompatActivity {
             intent.setAction(Intent.ACTION_GET_CONTENT);
             startActivityForResult(Intent.createChooser(intent,"Select Picture"),SELECT_PICTURE);
             return true;
-        }else if(id == R.id.action_harris){
-            if (mSampledImage == null){
-                Toast.makeText(getApplicationContext(),getString(R.string.toast_must_load_image),Toast.LENGTH_SHORT).show();
+        }else if(id == R.id.action_harris) {
+            if (mSampledImage == null) {
+                Toast.makeText(getApplicationContext(), getString(R.string.toast_must_load_image), Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -102,41 +130,6 @@ public class MainActivity extends AppCompatActivity {
             detector.detect(greyImage, keyPoints);
             Features2d.drawKeypoints(greyImage, keyPoints, greyImage);
             displayImage(greyImage);
-            return true;
-        }else if(id == R.id.action_line_crop){
-            if (mSampledImage == null){
-                Toast.makeText(getApplicationContext(),getString(R.string.toast_must_load_image),Toast.LENGTH_SHORT).show();
-                return true;
-            }
-
-            Mat gray = new Mat();
-            Imgproc.cvtColor(mSampledImage, gray, Imgproc.COLOR_RGB2GRAY);
-
-            Mat edgeImage = new Mat();
-            Imgproc.Canny(gray, edgeImage, 100, 200);
-
-            // Dilate
-            Mat dilated = new Mat();
-            Mat kernel;
-            kernel = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS, new Size(3, 3));
-            Imgproc.dilate(edgeImage, dilated, kernel);
-
-            /* estas usando este ejemplo
-            https://github.com/LowWeiLin/OpenCV_ImageBackgroundRemoval/blob/master/OpenCV_ImageBackgroundRemoval/main.cpp
-
-            el manual del flodfill
-            http://docs.opencv.org/2.4/modules/imgproc/doc/miscellaneous_transformations.html
-
-            Me parece que el problema es que la mascara esta quedando toda igual, fijate en el manual que dice que el flood fill no puede ir por cierto tipo de pixeles.
-            De todas formas la llamada a flood fill que estas haciendo ahora esta distinta a la del ejemplo.
-             */
-
-            // Flod fill
-            Mat flodFill = Mat.zeros(dilated.rows()+2,dilated.cols()+2, CvType.CV_8UC1);
-            Imgproc.floodFill(dilated,flodFill,new Point(0,0),new Scalar(0,0,255));
-
-            displayImage(flodFill);
-
             return true;
         }
 
@@ -240,6 +233,24 @@ public class MainActivity extends AppCompatActivity {
         //convert to bitmap
         Utils.matToBitmap(image, bitmap);
         mImageView.setImageBitmap(bitmap);
+    }
+
+    private void processImage(){
+        if (mSampledImage == null){
+            Toast.makeText(getApplicationContext(),getString(R.string.toast_must_load_image),Toast.LENGTH_SHORT).show();
+        }
+
+        Mat gray = new Mat();
+        Imgproc.cvtColor(mSampledImage, gray, Imgproc.COLOR_RGB2GRAY);
+
+        Mat blurredImage = new Mat();
+        Imgproc.GaussianBlur(gray, gray, new Size(mGausianSize, mGausianSize), 0);
+
+
+        Mat edgeImage = new Mat();
+        Imgproc.Canny(gray, edgeImage, 50, 100);
+
+        displayImage(edgeImage);
     }
 
 }
